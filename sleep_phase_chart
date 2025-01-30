@@ -1,0 +1,131 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "description": "Sleep-phase chart with thin bars and dashed lines connecting transitions (for Deneb).",
+  "width": 600,
+  "height": 200,
+  "data": {
+    "values": [
+      // Example data: each row is a phase from start to end
+      {
+        "phase": "Awake",
+        "start": "2023-01-22T20:57:00",
+        "end":   "2023-01-22T21:10:00"
+      },
+      {
+        "phase": "Light",
+        "start": "2023-01-22T21:10:00",
+        "end":   "2023-01-22T22:00:00"
+      },
+      {
+        "phase": "Deep",
+        "start": "2023-01-22T22:00:00",
+        "end":   "2023-01-22T23:10:00"
+      },
+      {
+        "phase": "REM",
+        "start": "2023-01-22T23:10:00",
+        "end":   "2023-01-23T00:00:00"
+      },
+      {
+        "phase": "Light",
+        "start": "2023-01-23T00:00:00",
+        "end":   "2023-01-23T02:00:00"
+      },
+      {
+        "phase": "Awake",
+        "start": "2023-01-23T02:00:00",
+        "end":   "2023-01-23T02:15:00"
+      },
+      {
+        "phase": "REM",
+        "start": "2023-01-23T02:15:00",
+        "end":   "2023-01-23T03:40:00"
+      },
+      {
+        "phase": "Light",
+        "start": "2023-01-23T03:40:00",
+        "end":   "2023-01-23T04:30:00"
+      },
+      {
+        "phase": "Deep",
+        "start": "2023-01-23T04:30:00",
+        "end":   "2023-01-23T05:40:00"
+      }
+    ]
+  },
+
+  // Create "next" fields (nextPhase, nextStart, nextEnd) for line connections
+  "transform": [
+    {
+      "window": [
+        {"op": "lead", "field": "phase", "as": "nextPhase"},
+        {"op": "lead", "field": "start", "as": "nextStart"},
+        {"op": "lead", "field": "end",   "as": "nextEnd"}
+      ],
+      "sort": [{"field": "start", "order": "ascending"}]
+    }
+  ],
+
+  "layer": [
+    // 1) Thin bar layer for each sleep phase interval
+    {
+      "mark": {
+        "type": "bar",
+        // Make bars thinner (vertical thickness, since "phase" is on y)
+        "cornerRadius": 2
+      },
+      "encoding": {
+        "x": {
+          "field": "start",
+          "type": "temporal",
+          "title": "Time"
+        },
+        "x2": {
+          "field": "end"
+        },
+        "y": {
+          "field": "phase",
+          "type": "ordinal",
+          "sort": ["Awake", "REM", "Light", "Deep"],
+          "title": "Sleep Phase",
+          // Shrink the band if you want narrower bars:
+          "scale": {"rangeStep": 20}
+        },
+        // Use a fixed size for the bar thickness
+        "size": {"value": 12},
+
+        // Color each phase differently
+        "color": {
+          "field": "phase",
+          "type": "nominal",
+          "sort": ["Awake", "REM", "Light", "Deep"]
+        },
+
+        // Add tooltips
+        "tooltip": [
+          {"field": "phase", "type": "nominal", "title": "Phase"},
+          {"field": "start", "type": "temporal", "title": "Start"},
+          {"field": "end",   "type": "temporal", "title": "End"}
+        ]
+      }
+    },
+
+    // 2) Dashed line layer to connect end of each phase to start of the next
+    {
+      "mark": {
+        "type": "rule",
+        "strokeDash": [4, 2],   // dash pattern
+        "color": "gray"
+      },
+      "encoding": {
+        // The left segment of the rule is the 'end' of current phase
+        "x": {"field": "end", "type": "temporal"},
+        "y": {"field": "phase", "type": "ordinal"},
+
+        // The right segment of the rule is the 'start' of the next phase
+        "x2": {"field": "nextStart"},
+        "y2": {"field": "nextPhase", "type": "ordinal"}
+      }
+    }
+  ]
+}
